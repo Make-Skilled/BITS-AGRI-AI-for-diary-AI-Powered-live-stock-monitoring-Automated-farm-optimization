@@ -80,18 +80,13 @@
                         </div>
                         {% endfor %}
                         
-                        {% for inquiry in inquiries[:3] %}
+                        {% for inquiry in inquiries %}
                         <div class="list-group-item">
                             <div class="d-flex w-100 justify-content-between">
                                 <h6 class="mb-1">Franchise Inquiry: {{ inquiry.franchise.name }}</h6>
                                 <small>{{ inquiry.created_at.strftime('%Y-%m-%d') }}</small>
                             </div>
                             <p class="mb-1">Status: <span class="badge bg-{{ 'success' if inquiry.status == 'accepted' else 'danger' if inquiry.status == 'rejected' else 'info' }}">{{ inquiry.status|title }}</span></p>
-                            <!-- <button class="btn btn-sm btn-info mt-2" 
-                                    onclick='viewInquiry("{{ inquiry.id }}", 
-                                                    "{{ inquiry.message|replace('\n', ' ')|replace('\'', '\\\'')|safe }}", 
-                                                    {{ inquiry.responses|map(attribute="to_dict")|list|tojson|safe }})'>
-                                View Conversation -->
                             </button>
                         </div>
                         {% endfor %}

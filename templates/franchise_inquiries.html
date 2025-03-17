@@ -48,12 +48,6 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <button class="btn btn-sm btn-info mb-1" 
-                                                onclick='viewInquiry("{{ inquiry.id }}", 
-                                                               "{{ inquiry.message|replace('\n', ' ')|replace('\'', '\\\'') }}", 
-                                                               {{ inquiry.responses|map(attribute="to_dict")|list|tojson|safe }})'>
-                                            View Details
-                                        </button>
                                         {% if inquiry.status == 'pending' %}
                                         <form action="{{ url_for('manage_inquiry', inquiry_id=inquiry.id) }}" method="POST" class="d-inline">
                                             <input type="hidden" name="action" value="accept">
