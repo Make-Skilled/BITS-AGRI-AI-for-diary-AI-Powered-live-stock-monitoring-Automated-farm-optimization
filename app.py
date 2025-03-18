@@ -7,6 +7,8 @@ from dateutil.relativedelta import relativedelta
 from werkzeug.utils import secure_filename
 import os
 from slugify import slugify
+from farm_predictor import predict_cows, validate_inputs
+import pickle
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
@@ -870,6 +872,108 @@ def breed_details(breed):
     if breed_data is None:
         abort(404)
     return render_template('breed_details.html', breed_data=breed_data)
+
+# Add this dictionary with veterinary doctors data
+VETERINARY_DOCTORS = {
+    'bangalore': [
+        {
+            'name': 'Dr. Rajesh Kumar',
+            'specialization': 'Large Animal Specialist',
+            'experience': '15 years',
+            'address': '#123, Veterinary Hospital, MG Road, Bangalore',
+            'contact': '+91 9876543210',
+            'available_hours': '9:00 AM - 6:00 PM',
+            'emergency_service': True,
+            'rating': 4.8,
+            'image': 'doctor1.jpg'
+        },
+        {
+            'name': 'Dr. Priya Singh',
+            'specialization': 'Cattle Care Expert',
+            'experience': '12 years',
+            'address': '#45, Pet Care Center, Whitefield, Bangalore',
+            'contact': '+91 9876543211',
+            'available_hours': '10:00 AM - 8:00 PM',
+            'emergency_service': True,
+            'rating': 4.9,
+            'image': 'doctor2.jpg'
+        },
+        {
+            'name': 'Dr. Mohammed Ali',
+            'specialization': 'Dairy Animal Specialist',
+            'experience': '20 years',
+            'address': '#78, Animal Care Hospital, JP Nagar, Bangalore',
+            'contact': '+91 9876543212',
+            'available_hours': '8:00 AM - 5:00 PM',
+            'emergency_service': False,
+            'rating': 4.7,
+            'image': 'doctor3.jpg'
+        }
+    ],
+    'mysore': [
+        {
+            'name': 'Dr. Ramesh Rao',
+            'specialization': 'Veterinary Surgeon',
+            'experience': '18 years',
+            'address': '#90, Cattle Care Center, Mysore Road',
+            'contact': '+91 9876543213',
+            'available_hours': '9:30 AM - 7:00 PM',
+            'emergency_service': True,
+            'rating': 4.6,
+            'image': 'doctor4.jpg'
+        }
+    ]
+}
+
+@app.route('/veterinary-doctors')
+def veterinary_doctors():
+    selected_city = request.args.get('city', 'bangalore')  # Default city is Bangalore
+    doctors = VETERINARY_DOCTORS.get(selected_city, [])
+    cities = list(VETERINARY_DOCTORS.keys())
+    return render_template('veterinary_doctors.html', 
+                         doctors=doctors, 
+                         cities=cities, 
+                         selected_city=selected_city)
+
+@app.route('/cow-calculator', methods=['GET', 'POST'])
+def cow_calculator():
+    result = None
+    if request.method == 'POST':
+        try:
+            # Get input values
+            land_size = float(request.form['land_size'])
+            shed_cost = float(request.form['shed_cost'])
+            feed_cost_day = float(request.form['feed_cost_day'])
+            feed_cost_month = float(request.form['feed_cost_month'])
+            cow_purchase_cost = float(request.form['cow_purchase_cost'])
+
+            # Validate inputs
+            validate_inputs(land_size, shed_cost, feed_cost_day, feed_cost_month, cow_purchase_cost)
+
+            # Get prediction
+            predicted_cows = predict_cows(
+                land_size, shed_cost, feed_cost_day, 
+                feed_cost_month, cow_purchase_cost
+            )
+
+            result = {
+                'status': 'Success',
+                'predicted_cows': predicted_cows,
+                'message': f"Recommended number of cows: {predicted_cows}"
+            }
+
+        except ValueError as e:
+            result = {
+                'status': 'Error',
+                'message': str(e)
+            }
+        except Exception as e:
+            result = {
+                'status': 'Error',
+                'message': 'An error occurred while processing your request.'
+            }
+
+    return render_template('cow_calculator.html', result=result)
 
 if __name__ == '__main__':
     with app.app_context():
