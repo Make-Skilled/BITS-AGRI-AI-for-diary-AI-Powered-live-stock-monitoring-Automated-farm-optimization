@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, abort, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from datetime import datetime
@@ -699,6 +699,177 @@ def respond_to_inquiry(inquiry_id):
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Dictionary containing breed information
+BREED_DATA = {
+    'gir': {
+        'name': 'Gir',
+        'lifespan': 20,
+        'origin': 'Gujarat',
+        'milk_yield': 12,
+        'features': 'High milk yield (1800-2500 liters/lactation), heat-resistant, docile temperament, distinctive curved horns',
+        'feed_management': 'Balanced diet with green fodder, concentrate mixture (2-3 kg/day), mineral supplements',
+        'health_precautions': 'Regular vaccinations, proper hygiene maintenance, periodic deworming',
+        'common_diseases': 'Mastitis, Bloat, Foot and Mouth Disease',
+        'medicines': 'Cloxacillin for mastitis, Flunixin for inflammation, FMD vaccine',
+        'price_range': '50,000 - 1,50,000',
+        'images': ['gir1.jpg', 'gir2.jpg']
+    },
+    'sahiwal': {
+        'name': 'Sahiwal',
+        'lifespan': 18,
+        'origin': 'Punjab',
+        'milk_yield': 10,
+        'features': 'High fat content milk (4.5-5.5%), disease-resistant, good heat tolerance, red-brown color',
+        'feed_management': 'High protein diet, green fodder (30-40 kg/day), concentrate feed (4-5 kg/day)',
+        'health_precautions': 'Regular deworming, tick control, vaccination schedule',
+        'common_diseases': 'Milk Fever, Foot Rot, Brucellosis',
+        'medicines': 'Calcium Borogluconate, Copper Sulfate foot bath, Brucella vaccine',
+        'price_range': '60,000 - 1,80,000',
+        'images': ['sahiwal1.jpg', 'sahiwal2.jpg']
+    },
+    'red_sindhi': {
+        'name': 'Red Sindhi',
+        'lifespan': 18,
+        'origin': 'Sindh (Pakistan)',
+        'milk_yield': 8,
+        'features': 'Deep red color, good milk producer, adaptable to harsh conditions',
+        'feed_management': 'Balanced minerals, green fodder (25-30 kg/day), drought-resistant feed',
+        'health_precautions': 'Clean water supply, feed quality monitoring, regular health checks',
+        'common_diseases': 'Diarrhea, Bloat, Respiratory infections',
+        'medicines': 'ORS supplements, Neomycin, Respiratory antibiotics',
+        'price_range': '40,000 - 1,20,000',
+        'images': ['red_sindhi1.jpg', 'red_sindhi2.jpg']
+    },
+    'rathi': {
+        'name': 'Rathi',
+        'lifespan': 15,
+        'origin': 'Rajasthan',
+        'milk_yield': 6,
+        'features': 'Well suited for arid regions, good milk fat content, sturdy build',
+        'feed_management': 'Fodder with high roughage content, drought-resistant feed varieties',
+        'health_precautions': 'Regular health checkups, heat stress management',
+        'common_diseases': 'Retained Placenta, Heat Stress, Metabolic disorders',
+        'medicines': 'Oxytocin, Penicillin, Electrolyte supplements',
+        'price_range': '35,000 - 1,00,000',
+        'images': ['rathi1.jpg', 'rathi2.jpg']
+    },
+    'tharparkar': {
+        'name': 'Tharparkar',
+        'lifespan': 20,
+        'origin': 'Rajasthan',
+        'milk_yield': 10,
+        'features': 'Strong disease resistance, good milk producer, white/gray color',
+        'feed_management': 'Dry fodder supplemented with minerals, adapted to scarce conditions',
+        'health_precautions': 'Regular disease monitoring, vaccination program',
+        'common_diseases': 'Anaplasmosis, Tick-borne diseases',
+        'medicines': 'Oxytetracycline, Amitraz for tick control',
+        'price_range': '50,000 - 1,50,000',
+        'images': ['tharparkar1.jpg', 'tharparkar2.jpg']
+    },
+    'hariana': {
+        'name': 'Hariana',
+        'lifespan': 18,
+        'origin': 'Haryana',
+        'milk_yield': 5,
+        'features': 'Dual-purpose breed, good draught power, moderate milk yield',
+        'feed_management': 'Grain-based feed, green fodder mix',
+        'health_precautions': 'Good shelter provision, parasite control',
+        'common_diseases': 'Theileriosis, Worm infestation',
+        'medicines': 'Buparvaquone, Ivermectin',
+        'price_range': '30,000 - 90,000',
+        'images': ['hariana1.jpg', 'hariana2.jpg']
+    },
+    'ongole': {
+        'name': 'Ongole',
+        'lifespan': 18,
+        'origin': 'Andhra Pradesh',
+        'milk_yield': 5,
+        'features': 'Large muscular build, excellent draught animal, heat tolerant',
+        'feed_management': 'High energy feed, focus on muscle maintenance',
+        'health_precautions': 'Regular hoof care, vaccination schedule',
+        'common_diseases': 'Lumpy Skin Disease, Foot and Mouth Disease',
+        'medicines': 'LSD Vaccine, Oxytetracycline',
+        'price_range': '40,000 - 1,20,000',
+        'images': ['ongole1.jpg', 'ongole2.jpg']
+    },
+    'kankrej': {
+        'name': 'Kankrej',
+        'lifespan': 18,
+        'origin': 'Gujarat',
+        'milk_yield': 6,
+        'features': 'Suitable for both milk and draught, distinctive long horns',
+        'feed_management': 'Balanced mix of dry and green fodder, mineral supplements',
+        'health_precautions': 'Clean shed maintenance, proper ventilation',
+        'common_diseases': 'Foot Rot, Diarrhea',
+        'medicines': 'Copper Sulfate, Zinc sulfate',
+        'price_range': '50,000 - 1,50,000',
+        'images': ['kankrej1.jpg', 'kankrej2.jpg']
+    },
+    'deoni': {
+        'name': 'Deoni',
+        'lifespan': 15,
+        'origin': 'Maharashtra',
+        'milk_yield': 5,
+        'features': 'Hardy breed, disease resistant, black and white colored',
+        'feed_management': 'High fiber diet, locally available fodder',
+        'health_precautions': 'Avoid overcrowding, regular cleaning',
+        'common_diseases': 'Worm Infestation, Bacterial infections',
+        'medicines': 'Albendazole, Ivermectin',
+        'price_range': '35,000 - 1,00,000',
+        'images': ['deoni1.jpg', 'deoni2.jpg']
+    },
+    'hallikar': {
+        'name': 'Hallikar',
+        'lifespan': 18,
+        'origin': 'Karnataka',
+        'milk_yield': 3,
+        'features': 'Excellent draught breed, compact body, agile',
+        'feed_management': 'Protein-rich feed, emphasis on muscle development',
+        'health_precautions': 'Regular hoof trimming, exercise routine',
+        'common_diseases': 'Foot Rot, Joint problems',
+        'medicines': 'Terramycin, Anti-inflammatory drugs',
+        'price_range': '30,000 - 80,000',
+        'images': ['hallikar1.jpg', 'hallikar2.jpg']
+    },
+    'kangayam': {
+        'name': 'Kangayam',
+        'lifespan': 18,
+        'origin': 'Tamil Nadu',
+        'milk_yield': 3,
+        'features': 'Strong draught animal, hardy constitution, gray-white color',
+        'feed_management': 'Grass-based diet, supplementary concentrates',
+        'health_precautions': 'Tick and fly control, regular grooming',
+        'common_diseases': 'Bloat, Skin infections',
+        'medicines': 'Bloatguard, Tympanyl',
+        'price_range': '25,000 - 75,000',
+        'images': ['kangayam1.jpg', 'kangayam2.jpg']
+    },
+    'amrit_mahal': {
+        'name': 'Amrit Mahal',
+        'lifespan': 20,
+        'origin': 'Karnataka',
+        'milk_yield': 3,
+        'features': 'Fast moving, good load carrier, aggressive temperament',
+        'feed_management': 'Specialized draught-supporting feed, high energy diet',
+        'health_precautions': 'Regular exercise, proper housing',
+        'common_diseases': 'Anaplasmosis, Heat stress',
+        'medicines': 'Oxytetracycline, Cooling supplements',
+        'price_range': '40,000 - 1,20,000',
+        'images': ['amrit_mahal1.jpg', 'amrit_mahal2.jpg']
+    }
+}
+
+@app.route('/cattle-breeds')
+def cattle_breeds():
+    return render_template('cattle_breeds.html')
+
+@app.route('/breed/<breed>')
+def breed_details(breed):
+    breed_data = BREED_DATA.get(breed)
+    if breed_data is None:
+        abort(404)
+    return render_template('breed_details.html', breed_data=breed_data)
 
 if __name__ == '__main__':
     with app.app_context():
